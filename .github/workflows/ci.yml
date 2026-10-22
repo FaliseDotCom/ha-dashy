@@ -1,0 +1,102 @@
+# Lints the scripts, builds the app image and checks that it starts, serves
+# Dashy and asks for a login. Runs for every pull request, including
+# Dependabot's, and for every push to main.
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: ShellCheck
+        run: shellcheck dashy/run.sh scripts/update-dashy.sh
+
+      - name: Check the scripts' JavaScript syntax
+        run: |
+          node --check dashy/ha-login.mjs
+          node --check scripts/fake-supervisor.mjs
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build the image
+        run: docker build -t local/dashy-app dashy
+
+      - name: Start the app
+        run: |
+          mkdir -p test/data test/config
+          cat > test/data/options.json <<'JSON'
+          {
+            "require_login": true,
+            "allowed_users": [],
+            "enable_api": false,
+            "disable_proxy_endpoints": false,
+            "config_backups": true
+          }
+          JSON
+          docker network create dashy-test
+          docker run -d --name fake-supervisor --network dashy-test --network-alias supervisor \
+            -v "$PWD/scripts:/scripts" --entrypoint node local/dashy-app /scripts/fake-supervisor.mjs
+          docker run -d --name dashy-test --network dashy-test -p 4000:8080 \
+            -e SUPERVISOR_TOKEN=test-token \
+            -v "$PWD/test/data:/data" -v "$PWD/test/config:/config" local/dashy-app
+
+      - name: Wait until the app is healthy
+        run: |
+          for _ in $(seq 1 30)
+          do
+            status=$(docker inspect -f '{{.State.Health.Status}}' dashy-test)
+            if [ "$status" = "healthy" ]
+            then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "The app did not become healthy; last status: $status"
+          exit 1
+
+      - name: Check the responses
+        run: |
+          # Usage: expect <status> <path> [curl options]
+          expect()
+          {
+            local status="$1"
+            local path="$2"
+            shift 2
+            local code
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$@" "http://localhost:4000$path")
+            if [ "$code" != "$status" ]
+            then
+              echo "$path $* returned $code instead of $status"
+              exit 1
+            fi
+          }
+          expect 200 /healthz
+          expect 401 /
+          expect 401 /conf.yml
+          expect 401 / -u admin:wrong-password
+          expect 200 / -u admin:secret123
+          expect 200 /conf.yml -u admin:secret123
+          expect 404 /config-backups/conf.yml -u admin:secret123
+          expect 404 /.env -u admin:secret123
+          test -f test/config/conf.yml
+          docker logs dashy-test > app.log 2>&1
+          grep -q 'Config file is valid' app.log
+
+      - name: Show the app log
+        if: always()
+        run: |
+          docker logs dashy-test
+          docker logs fake-supervisor

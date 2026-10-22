@@ -1,0 +1,28 @@
+configuration:
+  require_login:
+    name: Require login
+    description: >-
+      Asks for a Home Assistant user name and password before Dashy shows anything. Turn off only when
+      everyone who can reach Dashy may see and change the dashboard.
+  allowed_users:
+    name: Allowed users
+    description: >-
+      Home Assistant user names that may log in. Leave empty to let every Home Assistant user in.
+  enable_api:
+    name: REST API
+    description: >-
+      Turns on Dashy's REST API for reading and changing the configuration from scripts. Needs an API token.
+  api_token:
+    name: API token
+    description: Long random secret that scripts send as a bearer token to use the REST API.
+  disable_proxy_endpoints:
+    name: Turn off server requests
+    description: >-
+      Turns off status checks, ping checks and the CORS proxy, the features for which Dashy's server
+      contacts other addresses on behalf of the browser.
+  config_backups:
+    name: Keep configuration backups
+    description: >-
+      Saves a copy of conf.yml in the config-backups folder before every change made in Dashy.
+network:
+  8080/tcp: Dashy web interface

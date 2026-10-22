@@ -1,0 +1,45 @@
+# Completes Dependabot's pull requests for a new Dashy image. Dependabot only
+# changes the FROM line of dashy/Dockerfile; this workflow runs
+# scripts/update-dashy.sh to bump the version in config.yaml and the README
+# badge and to add a changelog entry, and pushes that to the pull request.
+#
+# A push with the workflow token starts no new workflow runs, so the CI result
+# on the pull request stays the one of Dependabot's own commit, which builds
+# the new image. Dependabot stops rebasing a pull request once it has commits of
+# others; ask it with "@dependabot recreate" when needed.
+name: Complete Dashy update
+
+on:
+  pull_request:
+    paths:
+      - dashy/Dockerfile
+
+permissions:
+  contents: write
+
+jobs:
+  complete:
+    if: github.actor == 'dependabot[bot]' && startsWith( github.head_ref, 'dependabot/docker/' )
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Bump the app version
+        run: |
+          version=$(sed -n 's|^FROM lissy93/dashy:||p' dashy/Dockerfile)
+          bash scripts/update-dashy.sh --no-build "$version"
+
+      - name: Push the changes
+        run: |
+          if git diff --quiet
+          then
+            echo "Nothing to change."
+            exit 0
+          fi
+          version=$(sed -n 's|^FROM lissy93/dashy:||p' dashy/Dockerfile)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Bump the app to Dashy $version"
+          git push

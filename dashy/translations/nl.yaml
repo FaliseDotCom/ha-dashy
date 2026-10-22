@@ -1,0 +1,28 @@
+configuration:
+  require_login:
+    name: Inloggen verplicht
+    description: >-
+      Vraagt om een Home Assistant-gebruikersnaam en -wachtwoord voordat Dashy iets laat zien. Zet dit
+      alleen uit als iedereen die Dashy kan bereiken het dashboard mag zien en wijzigen.
+  allowed_users:
+    name: Toegestane gebruikers
+    description: >-
+      Home Assistant-gebruikersnamen die mogen inloggen. Laat leeg om elke Home Assistant-gebruiker toe te laten.
+  enable_api:
+    name: REST API
+    description: >-
+      Zet Dashy's REST API aan om de configuratie vanuit scripts te lezen en te wijzigen. Vereist een API-token.
+  api_token:
+    name: API-token
+    description: Lang willekeurig geheim dat scripts als bearer-token meesturen om de REST API te gebruiken.
+  disable_proxy_endpoints:
+    name: Serververzoeken uitschakelen
+    description: >-
+      Schakelt statuscontroles, pingcontroles en de CORS-proxy uit, de functies waarvoor Dashy's server
+      namens de browser andere adressen benadert.
+  config_backups:
+    name: Back-ups van de configuratie bewaren
+    description: >-
+      Bewaart vóór elke wijziging in Dashy een kopie van conf.yml in de map config-backups.
+network:
+  8080/tcp: Dashy-webinterface

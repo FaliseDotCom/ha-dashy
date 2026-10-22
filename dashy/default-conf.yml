@@ -1,0 +1,43 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Lissy93/dashy/master/src/utils/config/ConfigSchema.json
+---
+# Starter dashboard, created by the Home Assistant app on first start.
+# Edit it in Dashy (the pencil icon), or change this file in the app
+# configuration folder. See https://dashy.to/docs/configuring for every option.
+
+pageInfo:
+  title: Home
+  description: My home dashboard
+  navLinks:
+    - title: Dashy documentation
+      path: https://dashy.to/docs
+
+appConfig:
+  theme: colorful
+  layout: auto
+  iconSize: medium
+
+sections:
+  - name: Home Assistant
+    icon: hl-home-assistant
+    items:
+      - title: Home Assistant
+        description: Change this address to the one you use for Home Assistant
+        url: http://homeassistant.local:8123
+        icon: hl-home-assistant
+        statusCheck: true
+
+  - name: Getting started
+    icon: fas fa-rocket
+    items:
+      - title: Configuring
+        description: All options of conf.yml
+        url: https://dashy.to/docs/configuring
+        icon: fas fa-sliders-h
+      - title: Widgets
+        description: Clocks, weather, system info and more
+        url: https://dashy.to/docs/widgets
+        icon: fas fa-th-large
+      - title: Icons
+        description: Font Awesome, home lab icons, favicons and your own images
+        url: https://dashy.to/docs/icons
+        icon: fas fa-icons

@@ -1,0 +1,23 @@
+# Opens pull requests for new Dashy releases (the FROM line of dashy/Dockerfile)
+# and for new versions of the GitHub Actions used in the workflows. The
+# "Complete Dashy update" workflow adds the version bump in config.yaml, the
+# README badge and the changelog entry to each Dashy pull request.
+version: 2
+updates:
+  - package-ecosystem: docker
+    directory: /dashy
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: Update Dashy
+    labels:
+      - dependencies
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: Update GitHub Actions
+    labels:
+      - dependencies
