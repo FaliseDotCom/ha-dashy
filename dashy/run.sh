@@ -178,7 +178,7 @@ stop_all()
   done
 }
 
-# shellcheck disable=SC2329 # Invoked through the trap set in main.
+# shellcheck disable=SC2317,SC2329 # Invoked through the trap set in main.
 shutdown()
 {
   # Ignore repeated stop signals so the shutdown runs only once.
