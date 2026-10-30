@@ -3,10 +3,11 @@
 # scripts/update-dashy.sh to bump the version in config.yaml and the README
 # badge and to add a changelog entry, and pushes that to the pull request.
 #
-# A push with the workflow token starts no new workflow runs, so the CI result
-# on the pull request stays the one of Dependabot's own commit, which builds
-# the new image. Dependabot stops rebasing a pull request once it has commits of
-# others; ask it with "@dependabot recreate" when needed.
+# The push starts CI again for the new commit, but GitHub holds those runs as
+# "action required" until someone approves them in the Actions tab. Dependabot's
+# own commit already ran CI and built the new image, and the pushed commit
+# changes only text files. Dependabot stops rebasing a pull request once it has
+# commits of others; ask it with "@dependabot recreate" when needed.
 name: Complete Dashy update
 
 on:
