@@ -1,7 +1,7 @@
 # Dashy for Home Assistant
 
 [![Add repository to Home Assistant][repository-badge]][repository-url]
-![Dashy 4.8.7][dashy-shield]
+![Dashy 4.9.0][dashy-shield]
 ![Supports aarch64 Architecture][aarch64-shield]
 ![Supports amd64 Architecture][amd64-shield]
 [![License: MIT][license-shield]](LICENSE)
@@ -81,7 +81,7 @@ and belong to the Dashy project.
 
 [repository-badge]: https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg
 [repository-url]: https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FFaliseDotCom%2Fha-dashy
-[dashy-shield]: https://img.shields.io/badge/Dashy-4.8.7-blue.svg
+[dashy-shield]: https://img.shields.io/badge/Dashy-4.9.0-blue.svg
 [aarch64-shield]: https://img.shields.io/badge/aarch64-yes-green.svg
 [amd64-shield]: https://img.shields.io/badge/amd64-yes-green.svg
 [license-shield]: https://img.shields.io/badge/license-MIT-green.svg

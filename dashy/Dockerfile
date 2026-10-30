@@ -2,7 +2,7 @@
 #
 # The upstream image is pinned to an exact release. Bump this tag and the
 # `version` in config.yaml together (see .docs/releasing.md).
-FROM lissy93/dashy:4.8.7
+FROM lissy93/dashy:4.9.0
 
 # The upstream image runs as the node user. run.sh starts as root to prepare the
 # app configuration folder and start nginx, then runs Dashy and the login check
