@@ -6,7 +6,9 @@ version the app contains; see the
 
 ## 4.9.12
 
-- Dashy 4.9.12. See the [Dashy releases](https://github.com/Lissy93/dashy/releases) for what changed.
+- Dashy 4.9.12. Fixes auth headers being sent to lookalike origins, adds an `iconColor` option
+  for items, and fixes workspace search. See the
+  [Dashy releases](https://github.com/Lissy93/dashy/releases) for what changed.
 
 ## 4.9.0
 
