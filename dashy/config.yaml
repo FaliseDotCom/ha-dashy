@@ -1,5 +1,5 @@
 name: Dashy
-version: "4.9.12"
+version: "4.9.17"
 slug: dashy
 description: A self-hosted start page for your home lab, with status checks, widgets and themes.
 url: https://github.com/FaliseDotCom/ha-dashy/tree/main/dashy

@@ -4,6 +4,14 @@ All notable changes to this app are documented here. The version number is the D
 version the app contains; see the
 [Dashy releases](https://github.com/Lissy93/dashy/releases) for changes in Dashy itself.
 
+## 4.9.17
+
+- Dashy 4.9.17. Fixes themes and custom CSS on dashboards with several pages: a page's
+  theme no longer carries over to the next, its custom CSS and stylesheets apply without a
+  reload, and the default theme no longer flashes before them. A slow page no longer
+  replaces the page you switched to. See the
+  [Dashy releases](https://github.com/Lissy93/dashy/releases) for what changed.
+
 ## 4.9.12
 
 - Dashy 4.9.12. Fixes auth headers being sent to lookalike origins, adds an `iconColor` option
