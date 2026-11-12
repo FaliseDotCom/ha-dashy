@@ -6,7 +6,11 @@ version the app contains; see the
 
 ## 4.9.17
 
-- Dashy 4.9.17. See the [Dashy releases](https://github.com/Lissy93/dashy/releases) for what changed.
+- Dashy 4.9.17. Fixes themes and custom CSS on dashboards with several pages: a page's
+  theme no longer carries over to the next, its custom CSS and stylesheets apply without a
+  reload, and the default theme no longer flashes before them. A slow page no longer
+  replaces the page you switched to. See the
+  [Dashy releases](https://github.com/Lissy93/dashy/releases) for what changed.
 
 ## 4.9.12
 
