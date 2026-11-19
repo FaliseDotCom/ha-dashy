@@ -4,6 +4,10 @@ All notable changes to this app are documented here. The version number is the D
 version the app contains; see the
 [Dashy releases](https://github.com/Lissy93/dashy/releases) for changes in Dashy itself.
 
+## 4.9.18
+
+- Dashy 4.9.18. See the [Dashy releases](https://github.com/Lissy93/dashy/releases) for what changed.
+
 ## 4.9.17
 
 - Dashy 4.9.17. Fixes themes and custom CSS on dashboards with several pages: a page's
