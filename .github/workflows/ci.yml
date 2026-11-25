@@ -122,25 +122,52 @@ jobs:
 
       # Uses Dashy's server functions once each, so the AppArmor check below
       # covers what they need: saving, system information, status and ping
-      # checks, the CORS proxy and running ping.
+      # checks, the CORS proxy and running ping. Dashy answers 200 also when
+      # a function fails and reports the failure in the body, so the body is
+      # checked too: a refusal without an AppArmor message would pass otherwise.
       - name: Check Dashy's server functions
         run: |
-          # Usage: call <path> [curl options]; prints the body, fails on an HTTP error
+          # Usage: call <path> [curl options]; saves the body as response.txt,
+          # prints it, and fails on an HTTP error
           call()
           {
             local path="$1"
             shift
             echo "== $path"
-            curl -sS --fail-with-body -u admin:secret123 "$@" "http://localhost:4000$path"
+            curl -sS --fail-with-body -u admin:secret123 -o response.txt "$@" "http://localhost:4000$path"
+            cat response.txt
             echo
           }
+          # Usage: expect <jq expression>; fails unless it is true for response.txt
+          expect()
+          {
+            if ! jq -e "$1" response.txt > /dev/null
+            then
+              echo "Unexpected answer; expected: $1"
+              exit 1
+            fi
+          }
           jq -Rs '{ config: . }' test/config/conf.yml > save.json
+          backups=$(find test/config/config-backups -name '*.yml' 2> /dev/null | wc -l)
           call /config-manager/save -H 'Content-Type: application/json' --data @save.json
-          ls test/config/config-backups/*.yml
+          expect '.success == true'
+          if [ "$(find test/config/config-backups -name '*.yml' | wc -l)" -le "$backups" ]
+          then
+            echo "Saving made no backup of conf.yml"
+            exit 1
+          fi
           call /system-info
+          expect '.meta.hostname and .memory.total and .load.one != null'
           call '/status-check?url=https://github.com'
+          expect '.successStatus == true'
           call '/ping-check?host=127.0.0.1&count=1'
-          call /cors-proxy -H 'Target-URL: https://github.com/robots.txt' -o /dev/null -w '%{http_code}'
+          expect '.successStatus == true'
+          call /cors-proxy -H 'Target-URL: https://github.com/robots.txt'
+          if ! grep -qi '^user-agent:' response.txt
+          then
+            echo "The CORS proxy did not return GitHub's robots.txt"
+            exit 1
+          fi
 
       # Read from the host: inside the container, reading another process's
       # label is itself refused by the profile.
