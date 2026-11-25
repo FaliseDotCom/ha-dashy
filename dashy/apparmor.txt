@@ -15,11 +15,11 @@
 profile dashy flags=(attach_disconnected,mediate_deleted) {
   #include <abstractions/base>
 
-  # run.sh gives /config to the node user and starts Dashy and the login check
-  # as node with su-exec; the nginx master starts its worker as nginx.
+  # run.sh copies the starter dashboard into /config and gives the folder to
+  # the node user, starts Dashy and the login check as node with su-exec, and
+  # stops them; the nginx master starts its worker as nginx.
   capability chown,
   capability dac_override,
-  capability fowner,
   capability kill,
   capability setgid,
   capability setuid,
@@ -28,8 +28,10 @@ profile dashy flags=(attach_disconnected,mediate_deleted) {
   network inet6 stream,
   network unix stream,
 
-  # Docker and the Supervisor send stop signals from outside the profile.
+  # Docker sends stop signals from outside the profile: unconfined, or from
+  # runc's own profile on hosts that have one.
   signal (receive) peer=unconfined,
+  signal (receive) peer=runc,
   signal (send, receive) peer=*_dashy,
   signal (send) peer=*_dashy//node,
 
@@ -43,35 +45,53 @@ profile dashy flags=(attach_disconnected,mediate_deleted) {
   /usr/sbin/nginx ix,
   /usr/local/bin/node cx -> node,
 
+  # Docker starts the health check, node /app/services/healthcheck.js, in this
+  # profile directly, so it does not switch to the node profile.
+  /usr/local/bin/node rm,
+  /app/package.json r,
+  /app/services/healthcheck.js r,
+  /sys/fs/cgroup/** r,
+  @{PROC}/[0-9]*/cgroup r,
+  @{PROC}/version_signature r,
+
   # System files and libraries
   /etc/** r,
   /lib/** mr,
   /usr/lib/** mr,
   /usr/share/** r,
+  /dev/tty rw,
 
   # The app's own files, its options and its configuration folder
   /opt/dashy-app/** r,
   /data/options.json r,
   /config/{,**} rw,
 
-  # run.sh writes the login switch for nginx; nginx its pid, temp files and log
+  # run.sh writes the login switch for nginx; nginx its pid, temp files and
+  # log, and its error log goes to /dev/stderr
   /run/{,**} rwk,
   /var/lib/nginx/{,**} rw,
   /var/log/nginx/{,**} rw,
   /tmp/{,**} rwk,
+  @{PROC}/[0-9]*/fd/[12] w,
 
   profile node flags=(attach_disconnected,mediate_deleted) {
     #include <abstractions/base>
 
     # Status checks, the CORS proxy and the update check reach out over the
-    # network; ping checks send ICMP echo requests.
+    # network. Ping checks send ICMP echo requests with a datagram socket, or
+    # with a raw socket where the host does not allow those; ping is setuid
+    # root, Node.js itself runs without the capability.
     network inet stream,
     network inet6 stream,
     network inet dgram,
     network inet6 dgram,
+    network inet raw,
+    network inet6 raw,
     network unix stream,
+    capability net_raw,
 
     signal (receive) peer=unconfined,
+    signal (receive) peer=runc,
     signal (receive) peer=*_dashy,
     signal (send, receive) peer=*_dashy//node,
 
@@ -94,7 +114,7 @@ profile dashy flags=(attach_disconnected,mediate_deleted) {
     # Node.js reads its memory limit and the system load
     /sys/fs/cgroup/** r,
     /sys/devices/system/cpu/** r,
-    @{PROC}/{cpuinfo,loadavg,meminfo,stat,uptime,version} r,
-    @{PROC}/@{pid}/{cgroup,maps,mountinfo,stat,status} r,
+    @{PROC}/{cpuinfo,loadavg,meminfo,stat,uptime,version,version_signature} r,
+    @{PROC}/[0-9]*/{cgroup,maps,mountinfo,stat,status} r,
   }
 }

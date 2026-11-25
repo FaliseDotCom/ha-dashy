@@ -54,7 +54,7 @@ jobs:
       - name: Load the AppArmor profile
         run: |
           sed "s/^profile dashy /profile $APPARMOR_PROFILE /" dashy/apparmor.txt > "$RUNNER_TEMP/apparmor.txt"
-          sudo apparmor_parser -r -W -C "$RUNNER_TEMP/apparmor.txt"
+          sudo apparmor_parser -r -W "$RUNNER_TEMP/apparmor.txt"
           # Keep the kernel from dropping AppArmor messages during the checks.
           sudo sysctl -q -w kernel.printk_ratelimit=0
 
