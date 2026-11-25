@@ -35,8 +35,8 @@ profile dashy flags=(attach_disconnected,mediate_deleted) {
 
   # Programs
   /sbin/tini ix,
-  /run.sh r,
-  /bin/bash ix,
+  /run.sh rix,
+  /bin/bash rix,
   /bin/busybox ix,
   /usr/bin/jq ix,
   /sbin/su-exec ix,
