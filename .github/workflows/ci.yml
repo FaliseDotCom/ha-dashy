@@ -142,6 +142,17 @@ jobs:
           call '/ping-check?host=127.0.0.1&count=1'
           call /cors-proxy -H 'Target-URL: https://github.com/robots.txt' -o /dev/null -w '%{http_code}'
 
+      # Read from the host: inside the container, reading another process's
+      # label is itself refused by the profile.
+      - name: Check that the app runs confined
+        run: |
+          ps -eo label:30,args > processes.txt
+          grep -E 'tini|run.sh|server.js|ha-login|nginx' processes.txt | tee labels.txt
+          grep -qE "^$APPARMOR_PROFILE \(enforce\) +/sbin/tini" labels.txt
+          grep -qE "^$APPARMOR_PROFILE//node \(enforce\) +node server.js" labels.txt
+          grep -qE "^$APPARMOR_PROFILE//node \(enforce\) +node /opt/dashy-app/ha-login.mjs" labels.txt
+          grep -qE "^$APPARMOR_PROFILE \(enforce\) +nginx: worker" labels.txt
+
       - name: Stop the app
         run: |
           docker stop dashy-test

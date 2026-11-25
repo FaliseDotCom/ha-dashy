@@ -4,6 +4,11 @@ All notable changes to this app are documented here. The version number is the D
 version the app contains; see the
 [Dashy releases](https://github.com/Lissy93/dashy/releases) for changes in Dashy itself.
 
+## 4.9.18.1
+
+- The app now has its own AppArmor profile, which limits what Dashy may read, write and run
+  on Home Assistant OS. This raises the app's security rating from 6 to 7.
+
 ## 4.9.18
 
 - Dashy 4.9.18. See the [Dashy releases](https://github.com/Lissy93/dashy/releases) for what changed.

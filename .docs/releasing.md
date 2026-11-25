@@ -73,6 +73,10 @@ For a change to the app itself without a new Dashy release, add a fourth version
 
 ## Changes to watch for
 
+- **New access under AppArmor.** CI fails in the step *Check for AppArmor denials* when the
+  new release needs a file, program or permission that `dashy/apparmor.txt` does not grant.
+  [Development](development.md#apparmor-in-ci) explains how to find and add what is missing.
+
 - **A different user or entrypoint.** `run.sh` assumes the `node` user, `tini` at
   `/sbin/tini` as the entrypoint, and Alpine's `apk`, with an `nginx` package that has the
   `auth_request` and `realip` modules.

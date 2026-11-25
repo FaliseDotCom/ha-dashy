@@ -20,9 +20,11 @@ dashy/
   CHANGELOG.md               Release notes, shown when an update is available
   icon.png, logo.png         Artwork, resized from Dashy's own icon
   translations/              Option names and descriptions (en, nl)
+  apparmor.txt               AppArmor profile, loaded by the Supervisor
 .github/
   dependabot.yml             Weekly checks for a new Dashy image and new Actions
-  workflows/ci.yml           Lint, build and start the app on every pull request
+  workflows/ci.yml           Lint, build and start the app under its AppArmor profile on
+                             every pull request
   workflows/dependabot-dashy.yml  Completes Dependabot's Dashy pull requests
 .devcontainer/, .vscode/     Home Assistant development environment
 .docs/                       Documentation for contributors
@@ -107,6 +109,30 @@ The Dockerfile replaces the upstream health check, which runs every five minutes
 Supervisor shows the app as *starting* until the first check passes. The new one runs every
 30 seconds, with the same `services/healthcheck.js`, which requests `/healthz` on port 8080,
 so through nginx. The Supervisor watchdog requests the same `/healthz` from outside.
+
+### AppArmor
+
+`apparmor.txt` replaces Docker's default AppArmor profile when the host enforces AppArmor, as
+Home Assistant OS does, and earns the app a point on its security rating. It holds two
+profiles:
+
+| Profile | Runs                                                       | May write                  |
+| ------- | ---------------------------------------------------------- | -------------------------- |
+| top     | tini, `run.sh` and its tools as root, nginx, health check  | `/config`, `/run`, `/tmp`, nginx's folders |
+| `node`  | Dashy, the login check, and `ping` for ping checks          | `/config`, `/tmp`          |
+
+Everything else is refused, also when the file permissions would allow it: the `node` profile
+cannot change Dashy's or the app's own files, read the app options with the API token, or
+run anything but `ping`. A process switches to the `node` profile when it starts
+`/usr/local/bin/node`, except the health check, which Docker starts directly in the top
+profile.
+
+The Supervisor renames the top profile to the app's full slug, such as `local_dashy` or
+`1a2b3c4d_dashy`, so the signal rules match peers with `*_dashy`. It only accepts one
+profile that starts at the beginning of a line; the `node` profile is indented.
+
+Rules use `[0-9]*` for process IDs instead of `@{pid}`, which older AppArmor versions on the
+host do not define.
 
 ### Storage
 
@@ -215,6 +241,9 @@ To check the `aarch64` build on an `amd64` machine (slow, uses emulation):
 docker buildx build --platform linux/arm64 -t local/dashy-app:arm64 dashy
 ```
 
+Docker Desktop and WSL do not enforce AppArmor, so a local run does not test
+`apparmor.txt`; CI does (see below).
+
 Things worth checking after a change to `run.sh`, `nginx.conf` or `ha-login.mjs`:
 
 - A fresh start creates `conf.yml`; a second start leaves it alone.
@@ -236,6 +265,19 @@ Things worth checking after a change to `run.sh`, `nginx.conf` or `ha-login.mjs`
 - `docker exec dashy-test pkill -f server.js` stops the whole app with exit code 1.
 - `docker inspect -f '{{.State.Health.Status}}' dashy-test` turns `healthy` within a
   minute.
+
+### AppArmor in CI
+
+GitHub's Ubuntu runners enforce AppArmor. The CI workflow loads `apparmor.txt` under the name
+`local_dashy`, as the Supervisor would for a local app, starts the app with it, uses each of
+Dashy's server functions once (saving, system information, status and ping checks, the CORS
+proxy), checks that Dashy, the login check and nginx run confined, stops the app, and fails
+on any AppArmor message about the profile. A Dashy update that needs new access therefore
+fails CI with the refused access in the log of the step *Check for AppArmor denials*.
+
+To find out what a change needs, add `-C` to the `apparmor_parser` command in the workflow:
+the profile then only logs what it would refuse, as `apparmor="ALLOWED"`, and the step lists
+every message. Add rules for them, then remove `-C` again.
 
 ### 3. Run in a development Home Assistant
 
@@ -264,3 +306,14 @@ same computer.
 A local copy is a separate app from the one installed from GitHub, with its own
 configuration folder, so both can be installed side by side as long as their ports differ.
 After changing files, rebuild from the app's three-dots menu (**Rebuild**).
+
+Home Assistant OS enforces the AppArmor profile. After installing a change to
+`apparmor.txt`, use the dashboard, save in Dashy's editor and run a status and a ping check,
+then look for refusals in the host log, with the **Advanced SSH & Web Terminal** app
+(protection mode off) or on the host console:
+
+```bash
+journalctl _TRANSPORT=audit -g 'apparmor="DENIED"' --since -1h
+```
+
+The security rating on the app's page shows 7 once the profile is in use.

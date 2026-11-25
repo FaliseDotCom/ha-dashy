@@ -301,6 +301,8 @@ What the app does to protect your dashboard:
 - The configuration backups and hidden files are never served.
 - Dashy itself is only reachable from inside the app, runs as an unprivileged user, and does
   not get the app's Supervisor token.
+- An AppArmor profile limits what the app may do on Home Assistant OS: Dashy can change
+  only the configuration folder, and can start no other programs than `ping`.
 - The REST API is off, and cannot be turned on without its own token.
 - Pages carry headers that stop browsers from guessing file types and limit what other sites
   learn about the address you came from.
