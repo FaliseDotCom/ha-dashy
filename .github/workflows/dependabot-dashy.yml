@@ -22,6 +22,7 @@ jobs:
   complete:
     if: github.actor == 'dependabot[bot]' && startsWith( github.head_ref, 'dependabot/docker/' )
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
         with:

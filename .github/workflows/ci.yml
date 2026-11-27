@@ -1,20 +1,32 @@
 # Lints the scripts, builds the app image and checks that it starts, serves
-# Dashy and asks for a login. Runs for every pull request, including
-# Dependabot's, and for every push to main.
+# Dashy and asks for a login, under the app's AppArmor profile in enforce mode.
+# Runs for every pull request, including Dependabot's, and for every push to
+# main, except when only documentation changes.
 name: CI
 
 on:
   push:
     branches:
       - main
+    paths-ignore:
+      - '**.md'
+      - .docs/**
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - .docs/**
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
 
@@ -28,11 +40,23 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # The Supervisor renames the profile to the app's full slug; see
+      # dashy/apparmor.txt.
+      APPARMOR_PROFILE: local_dashy
     steps:
       - uses: actions/checkout@v7
 
       - name: Build the image
         run: docker build -t local/dashy-app dashy
+
+      - name: Load the AppArmor profile
+        run: |
+          sed "s/^profile dashy /profile $APPARMOR_PROFILE /" dashy/apparmor.txt > "$RUNNER_TEMP/apparmor.txt"
+          sudo apparmor_parser -r -W "$RUNNER_TEMP/apparmor.txt"
+          # Keep the kernel from dropping AppArmor messages during the checks.
+          sudo sysctl -q -w kernel.printk_ratelimit=0
 
       - name: Start the app
         run: |
@@ -50,6 +74,7 @@ jobs:
           docker run -d --name fake-supervisor --network dashy-test --network-alias supervisor \
             -v "$PWD/scripts:/scripts" --entrypoint node local/dashy-app /scripts/fake-supervisor.mjs
           docker run -d --name dashy-test --network dashy-test -p 4000:8080 \
+            --security-opt "apparmor=$APPARMOR_PROFILE" \
             -e SUPERVISOR_TOKEN=test-token \
             -v "$PWD/test/data:/data" -v "$PWD/test/config:/config" local/dashy-app
 
@@ -94,6 +119,87 @@ jobs:
           test -f test/config/conf.yml
           docker logs dashy-test > app.log 2>&1
           grep -q 'Config file is valid' app.log
+
+      # Uses Dashy's server functions once each, so the AppArmor check below
+      # covers what they need: saving, system information, status and ping
+      # checks, the CORS proxy and running ping. Dashy answers 200 also when
+      # a function fails and reports the failure in the body, so the body is
+      # checked too: a refusal without an AppArmor message would pass otherwise.
+      - name: Check Dashy's server functions
+        run: |
+          # Usage: call <path> [curl options]; saves the body as response.txt,
+          # prints it, and fails on an HTTP error
+          call()
+          {
+            local path="$1"
+            shift
+            echo "== $path"
+            curl -sS --fail-with-body -u admin:secret123 -o response.txt "$@" "http://localhost:4000$path"
+            cat response.txt
+            echo
+          }
+          # Usage: expect <jq expression>; fails unless it is true for response.txt
+          expect()
+          {
+            if ! jq -e "$1" response.txt > /dev/null
+            then
+              echo "Unexpected answer; expected: $1"
+              exit 1
+            fi
+          }
+          jq -Rs '{ config: . }' test/config/conf.yml > save.json
+          backups=$(find test/config/config-backups -name '*.yml' 2> /dev/null | wc -l)
+          call /config-manager/save -H 'Content-Type: application/json' --data @save.json
+          expect '.success == true'
+          if [ "$(find test/config/config-backups -name '*.yml' | wc -l)" -le "$backups" ]
+          then
+            echo "Saving made no backup of conf.yml"
+            exit 1
+          fi
+          call /system-info
+          expect '.meta.hostname and .memory.total and .load.one != null'
+          call '/status-check?url=https://github.com'
+          expect '.successStatus == true'
+          call '/ping-check?host=127.0.0.1&count=1'
+          expect '.successStatus == true'
+          call /cors-proxy -H 'Target-URL: https://github.com/robots.txt'
+          if ! grep -qi '^user-agent:' response.txt
+          then
+            echo "The CORS proxy did not return GitHub's robots.txt"
+            exit 1
+          fi
+
+      # Read from the host: inside the container, reading another process's
+      # label is itself refused by the profile.
+      - name: Check that the app runs confined
+        run: |
+          ps -eo label:30,args > processes.txt
+          grep -E 'tini|run.sh|server.js|ha-login|nginx' processes.txt | tee labels.txt
+          grep -qE "^$APPARMOR_PROFILE \(enforce\) +/sbin/tini" labels.txt
+          grep -qE "^$APPARMOR_PROFILE//node \(enforce\) +node server.js" labels.txt
+          grep -qE "^$APPARMOR_PROFILE//node \(enforce\) +node /opt/dashy-app/ha-login.mjs" labels.txt
+          grep -qE "^$APPARMOR_PROFILE \(enforce\) +nginx: worker" labels.txt
+
+      - name: Stop the app
+        run: |
+          docker stop dashy-test
+          code=$(docker inspect -f '{{.State.ExitCode}}' dashy-test)
+          if [ "$code" != "0" ]
+          then
+            echo "The app stopped with exit code $code instead of 0"
+            exit 1
+          fi
+
+      - name: Check for AppArmor denials
+        if: always()
+        run: |
+          sudo dmesg | grep 'apparmor=' | grep "$APPARMOR_PROFILE" > apparmor.log || true
+          cat apparmor.log
+          if grep -qE 'apparmor="(DENIED|ALLOWED)"' apparmor.log
+          then
+            echo "The app needs access that dashy/apparmor.txt does not grant."
+            exit 1
+          fi
 
       - name: Show the app log
         if: always()
