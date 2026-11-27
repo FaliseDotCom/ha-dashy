@@ -4,6 +4,10 @@ All notable changes to this app are documented here. The version number is the D
 version the app contains; see the
 [Dashy releases](https://github.com/Lissy93/dashy/releases) for changes in Dashy itself.
 
+## 4.10.0
+
+- Dashy 4.10.0. See the [Dashy releases](https://github.com/Lissy93/dashy/releases) for what changed.
+
 ## 4.9.18.1
 
 - The app now has its own AppArmor profile, which limits what Dashy may read, write and run
